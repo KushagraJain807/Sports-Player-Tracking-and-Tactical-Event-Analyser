@@ -3,7 +3,7 @@ import os
 import hashlib
 import subprocess
 from pathlib import Path
-
+from model_downloader import ensure_model
 import pandas as pd
 import streamlit as st
 
@@ -270,13 +270,13 @@ elif page == "🎬 Match Analysis":
             try:
                 with status:
                     st.write("Running YOLO detection and player tracking...")
-
+                    model_path = ensure_model()
                     run_pipeline(
                         input_path=str(input_path),
                         output_video_path=str(output_avi),
                         heatmap_dir=str(heatmap_dir),
                         stats_path=str(stats_path),
-                        model_path=str(BASE_DIR / "models" / "best.pt"),
+                        model_path=model_path,
                         track_stub=None,
                         cam_stub=None,
                     )
