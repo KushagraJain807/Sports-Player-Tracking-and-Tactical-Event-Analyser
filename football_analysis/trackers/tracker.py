@@ -64,36 +64,74 @@ class Tracker:
                     tracks["referees"][frame_num][track_id] = {"bbox": bbox}
 
             # ball has no stable ID from ByteTrack; always store under key 1
-            for frame_det in det_sv:
-                bbox = frame_det[0].tolist()
-                cls_id = frame_det[3]
-                if cls_id == cls_names_inv.get("ball"):
-                    tracks["ball"][frame_num][1] = {"bbox": bbox}
+            
+            ball_class_id = cls_names_inv.get("ball")
+
+            if ball_class_id is not None:
+                ball_indices = np.where(
+                    det_sv.class_id == ball_class_id
+                )[0]
+
+                if len(ball_indices) > 0:
+                    best_idx = ball_indices[
+                        np.argmax(det_sv.confidence[ball_indices])
+                    ]
+
+                    tracks["ball"][frame_num][1] = {
+                        "bbox": det_sv.xyxy[best_idx].tolist()
+                    }
+
 
         if stub_path:
-            os.makedirs(os.path.dirname(stub_path), exist_ok=True)
+            stub_dir = os.path.dirname(stub_path)
+            if stub_dir:
+                os.makedirs(stub_dir, exist_ok=True)
             with open(stub_path, "wb") as f:
                 pickle.dump(tracks, f)
 
         return tracks
-
+        
     def add_position_to_tracks(self, tracks):
         for obj, obj_tracks in tracks.items():
             for frame_num, frame_track in enumerate(obj_tracks):
                 for track_id, info in frame_track.items():
                     bbox = info["bbox"]
+
                     position = (
                         get_center_of_bbox(bbox)
                         if obj == "ball"
                         else get_foot_position(bbox)
                     )
+
                     tracks[obj][frame_num][track_id]["position"] = position
 
+    
     def interpolate_ball_positions(self, ball_positions):
-        positions = [x.get(1, {}).get("bbox", []) for x in ball_positions]
-        df = pd.DataFrame(positions, columns=["x1", "y1", "x2", "y2"])
-        df = df.interpolate().bfill()
-        return [{1: {"bbox": row}} for row in df.to_numpy().tolist()]
+        if not ball_positions:
+            return []
+
+        positions = [
+            frame.get(1, {}).get("bbox", [np.nan] * 4)
+            for frame in ball_positions
+        ]
+
+        df = pd.DataFrame(
+            positions,
+            columns=["x1", "y1", "x2", "y2"]
+        )
+
+        # No ball detected anywhere in the video
+        if df.isna().all().all():
+            print("Warning: No ball detected in this video.")
+            return [{} for _ in ball_positions]
+
+        # Fill missing detections between observed ball positions
+        df = df.interpolate().bfill().ffill()
+
+        return [
+            {1: {"bbox": row.tolist()}}
+            for _, row in df.iterrows()
+        ]
 
     # ── Drawing ────────────────────────────────────────────────────────────
 

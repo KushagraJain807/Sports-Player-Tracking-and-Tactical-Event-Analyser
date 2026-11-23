@@ -18,3 +18,18 @@ venv/
 
 # Windows files
 Thumbs.db
+
+# Trained model checkpoints
+models/*.pt
+models/*.pth
+
+# Generated analysis outputs
+output_videos/
+runs/
+stubs/
+__pycache__/
+*.pyc
+
+# Local environment
+.env
+.venv/

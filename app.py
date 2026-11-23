@@ -201,7 +201,7 @@ if page == "🏠 Dashboard":
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Analyzed Matches", len(matches))
-    col2.metric("Detection Model", "YOLOv5x")
+    col2.metric("Detection Model", "YOLOv5su")
     col3.metric("Tracking System", "ByteTrack")
 
     st.subheader("Analysis Capabilities")
